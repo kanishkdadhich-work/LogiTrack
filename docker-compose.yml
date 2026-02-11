@@ -1,0 +1,27 @@
+services:
+  backend:
+    build: /home/kanishk/IdeaProjects/LogiTrackDay2
+    ports:
+      - "8080:8080"
+    environment:
+      # This pulls from your .env file
+      - SPRING_DATASOURCE_URL=${DB_URL}
+      - SPRING_DATASOURCE_USERNAME=${DB_USER}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASS}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - logitrack-net
+
+  frontend:
+    build: /home/kanishk/IdeaProjects/LogiTrackDay2/logitrack-ui
+    ports:
+      - "3000:80" # Map host port 3000 to Nginx port 80
+    depends_on:
+      - backend
+    networks:
+      - logitrack-net
+
+networks:
+  logitrack-net:
+    driver: bridge

@@ -1,0 +1,72 @@
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* Reusable Cards */
+.card {
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  transition: transform 0.2s ease;
+}
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+}
+
+/* Navigation Hover */
+.nav-link {
+  text-decoration: none;
+  color: #475569;
+  font-weight: 600;
+  transition: color 0.2s;
+}
+.nav-link:hover {
+  color: #2563eb;
+}
+
+/* Action Button Pop */
+.btn-action {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+.btn-action:hover {
+  background: #2563eb;
+  color: white;
+  border-color: #2563eb;
+}
+
+/* Hero Button */
+.btn-primary {
+  background: #2563eb;
+  color: white;
+  padding: 14px 28px;
+  border-radius: 10px;
+  border: none;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+  transition: all 0.3s;
+}
+.btn-primary:hover {
+  background: #1d4ed8;
+  transform: scale(1.05);
+}
+
+/* Table Row Highlight */
+.table-row {
+  transition: background 0.2s;
+}
+.table-row:hover {
+  background: #f8fafc;
+}

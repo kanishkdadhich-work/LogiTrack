@@ -1,0 +1,44 @@
+# === Java & Maven ===
+target/
+*.class
+*.jar
+*.war
+*.ear
+.mvn/
+mvnw
+mvnw.cmd
+.metadata/
+
+# === Node.js & Frontend (logitrack-ui) ===
+node_modules/
+**/node_modules/
+package-lock.json
+# (Keep package-lock inside logitrack-ui, but delete it from root)
+dist/
+build/
+.npm/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# === IDEs & Editors ===
+.idea/
+*.iml
+.vscode/
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+.DS_Store (Mac users)
+Thumbs.db (Windows users)
+
+# === Environment & Secrets ===
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# === Docker ===
+.dockerignore
