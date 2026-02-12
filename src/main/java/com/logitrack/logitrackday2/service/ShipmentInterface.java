@@ -6,7 +6,23 @@ package com.logitrack.logitrackday2.service;
  */
 public interface ShipmentInterface {
     Long getId();
+    Double getLength();
+    void setLength(Double length);
 
+    Double getWidth();
+    void setWidth(Double width);
+
+    Double getHeight();
+    void setHeight(Double height);
+
+    Double getDistanceInMeters();
+    void setDistanceInMeters(Double distance);
+
+    Double getCostPerMeter();
+    void setCostPerMeter(Double cost);
+    
+    Double getTotalCost();
+    void setTotalCost(Double totalCost);
     String getTrackingNumber();
     void setTrackingNumber(String trackingNumber);
 

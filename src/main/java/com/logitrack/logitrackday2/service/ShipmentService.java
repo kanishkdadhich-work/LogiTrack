@@ -89,7 +89,18 @@ public class ShipmentService { // Fixed: Removed the random "e" before the class
         if (shipmentRepository.findByTrackingNumber(shipment.getTrackingNumber()).isPresent()) {
             throw new DuplicateIdException();
         }
+        if (shipment.getDistanceInMeters() != null && shipment.getCostPerMeter() != null) {
+            double calculatedCost = shipment.getDistanceInMeters() * shipment.getCostPerMeter();
+            shipment.setTotalCost(calculatedCost);
+        }
 
+        if (shipment.getLength() != null && shipment.getWidth() != null && shipment.getHeight() != null &&
+                shipment.getDistanceInMeters() != null && shipment.getCostPerMeter() != null) {
+
+            double volume = shipment.getLength() * shipment.getWidth() * shipment.getHeight();
+            double calculatedCost = volume * shipment.getDistanceInMeters() * shipment.getCostPerMeter();
+            shipment.setTotalCost(calculatedCost);
+        }
         // 2. Validate the Driver 🚛
         if (shipment.getDriver() != null && shipment.getDriver().getId() != null) {
             Long driverId = shipment.getDriver().getId();

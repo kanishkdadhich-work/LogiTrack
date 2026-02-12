@@ -14,9 +14,27 @@ public class Shipment implements ShipmentInterface {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
 
+    @Setter
+    @Getter
+    private Double distanceInMeters;
+    @Setter
+    @Getter
+    private Double costPerMeter;
+    @Setter
+    @Getter
+    private Double totalCost;
     private String trackingNumber;
     private String deliveryAddress;
     private String status;
+    @Getter
+    @Setter
+    private Double length;
+    @Getter
+    @Setter
+    private Double width;
+    @Setter
+    @Getter
+    private Double height;
 
     public Shipment() {}
     @Transient
