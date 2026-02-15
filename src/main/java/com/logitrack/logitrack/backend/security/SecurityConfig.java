@@ -58,11 +58,10 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll() // Add this line! 🔑
-                        .requestMatchers("/api/test/public").permitAll()
-                        .requestMatchers("/api/test/manager").hasRole("MANAGER")
-                        .requestMatchers("/api/test/driver").hasRole("DRIVER")
+                        .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/public/**").permitAll()
+                        .requestMatchers("/api/users/**").hasRole("ADMIN") // Matches AdminUserController
+                        .requestMatchers("/api/shipment/**").hasAnyRole("ADMIN", "MANAGER")
                         .anyRequest().authenticated()
                 );
 

@@ -2,12 +2,11 @@ package com.logitrack.logitrack.backend.service;
 
 import com.logitrack.logitrack.backend.entity.User;
 import com.logitrack.logitrack.backend.repository.UserRepository;
+import com.logitrack.logitrack.backend.security.UserDetailsImpl;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
-
-import static org.springframework.data.jpa.domain.AbstractPersistable_.id;
 
 @Service
 public class UserDetailsServiceImpl implements UserDetailsService {
@@ -23,11 +22,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
 
-        return org.springframework.security.core.userdetails.User.builder()
-                .username(user.getUsername())
-                .password(user.getPassword())
-                .roles(user.getRole().name().replace("ROLE_", "")) // Spring adds ROLE_ automatically
-                .build();
+        // Change this from the builder to your custom UserDetailsImpl
+        return UserDetailsImpl.build(user);
     }
-
 }

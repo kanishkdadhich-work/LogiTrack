@@ -42,7 +42,24 @@ public class AuthTokenFilter extends OncePerRequestFilter {
             logger.error("Invalid JWT token: {}");
         }
 
+        try {
+            String jwt = parseJwt(request);
+            if (jwt != null && !jwt.isBlank() && jwtUtils.validateJwtToken(jwt)) {
+                String username = jwtUtils.getUserNameFromJwtToken(jwt);
+
+                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                UsernamePasswordAuthenticationToken authentication =
+                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+                // CRITICAL: This line actually logs the user in for this request
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            }
+        } catch (Exception e) {
+            logger.error("Cannot set user authentication: {}");
+        }
         filterChain.doFilter(request, response);
+
     }
 
 

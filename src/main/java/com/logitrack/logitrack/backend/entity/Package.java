@@ -18,7 +18,7 @@ public class Package {
 
     // Addresses
     private String senderName;
-    private String ReceiverName;
+    private String receiverName;
     private String sourceAddress;
     private String destinationAddress; // formerly deliveryAddress
 
