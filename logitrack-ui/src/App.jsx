@@ -1,74 +1,93 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useContext } from 'react';
+import { AuthContext } from './context/AuthContext.jsx';
 import Navbar from './components/Navbar.jsx';
 import Home from './components/home.jsx';
 import LoginPage from './components/LoginPage.jsx';
 import AdminDashboard from './assets/pages/AdminDashboard.jsx';
-import ShipmentForm from './components/ShipmentForm.jsx'; // Ensure the path and casing are correct
+import ShipmentForm from './components/ShipmentForm.jsx';
 import ShipmentTracker from './components/ShipmentTracker.jsx';
 import UpdateShipmentStatus from './components/UpdateShipmentStatus.jsx';
-import AddShipmentSimple from './components/AddShipmentSimple.jsx';
 import './App.css';
 
-function App() {
-    /**
-     * FIX: We explicitly define that userRole can be a string or null.
-     * This prevents the "unknown" type error when passing it to components.
-     */
-    const [userRole, setUserRole] = useState(null);
+// Placeholder components for your new flow goals
+const UserManagement = () => <div className="container"><h1>User Management (Admin Only)</h1><p>Manage users and passwords here.</p></div>;
+const ProfileSettings = () => <div className="container"><h1>Profile Settings</h1><p>Update your personal information and password.</p></div>;
 
-    const handleLogout = () => {
-        setUserRole(null);
-    };
+// Optimized ProtectedRoute using AuthContext helpers
+const ProtectedRoute = ({ children, allowedRoles }) => {
+    const { user, token, loading } = useContext(AuthContext);
+
+    if (loading) return null; // Prevent redirecting while checking storage
+    if (!token) return <Navigate to="/login" />;
+
+    // Check if user's role is in the allowed list
+    if (allowedRoles && !allowedRoles.includes(user?.role)) {
+        return <Navigate to="/" />;
+    }
+
+    return children;
+};
+
+function AppContent() {
+    const { user, logout, token, isAdmin, isManager, isDriver } = useContext(AuthContext);
 
     return (
-        <Router>
-            {/* The Navbar only renders if userRole is not null */}
-            {userRole && <Navbar role={userRole} onLogout={handleLogout} />}
+        <>
+            {/* Navbar shows role-specific links based on AuthContext */}
+            {token && <Navbar role={user?.role?.toLowerCase()} onLogout={logout} />}
 
             <Routes>
-                {/* Public Login Route */}
-                <Route
-                    path="/login"
-                    element={<LoginPage onLogin={(role) => setUserRole(role)} />}
-                />
-
-                {/* Landing Page Logic */}
-                <Route
-                    path="/"
-                    element={userRole ? <Navigate to="/admin" /> : <Home />}
-                />
-
-                {/* Customer Portal */}
+                {/* Public Routes */}
+                <Route path="/login" element={token ? <Navigate to="/" /> : <LoginPage />} />
+                <Route path="/" element={<Home />} />
                 <Route path="/track" element={<ShipmentTracker />} />
 
-                {/* Protected Manager Routes */}
-                <Route
-                    path="/admin"
-                    element={userRole === 'manager' ? <AdminDashboard /> : <Navigate to="/login" />}
-                />
-                <Route
-                    path="/admin/add-shipment"
-                    element={userRole === 'manager' ? <ShipmentForm /> : <Navigate to="/login" />}
-                />
-                <Route
-                    path="/admin/new-shipment"
-                    element={userRole === 'manager' ? <AddShipmentSimple /> : <Navigate to="/login" />}
-                />
+                {/* --- PAGE 1: User Management (Strictly Admin) --- */}
+                <Route path="/admin/users" element={
+                    <ProtectedRoute allowedRoles={['ADMIN']}>
+                        <UserManagement />
+                    </ProtectedRoute>
+                } />
 
-                {/* Protected Carrier/Manager Routes */}
-                <Route
-                    path="/admin/status"
-                    element={
-                        (userRole === 'carrier' || userRole === 'manager')
-                            ? <UpdateShipmentStatus />
-                            : <Navigate to="/login" />
-                    }
-                />
+                {/* --- PAGE 2: Logistics Portal (Admin & Manager) --- */}
+                <Route path="/admin" element={
+                    <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}>
+                        <AdminDashboard />
+                    </ProtectedRoute>
+                } />
 
-                {/* Catch-all Redirect */}
-                <Route path="*" element={<Navigate to="/login" />} />
+                <Route path="/admin/add-shipment" element={
+                    <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}>
+                        <ShipmentForm />
+                    </ProtectedRoute>
+                } />
+
+                {/* Status Updates: Admin, Manager, and Driver can access */}
+                <Route path="/admin/status" element={
+                    <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'DRIVER']}>
+                        <UpdateShipmentStatus />
+                    </ProtectedRoute>
+                } />
+
+                {/* --- PAGE 3: Profile Settings (Any Logged-in User) --- */}
+                <Route path="/profile" element={
+                    <ProtectedRoute>
+                        <ProfileSettings />
+                    </ProtectedRoute>
+                } />
+
+                {/* Catch-all */}
+                <Route path="*" element={<Navigate to={token ? "/" : "/login"} />} />
             </Routes>
+        </>
+    );
+}
+
+function App() {
+    return (
+        <Router>
+            <AppContent />
         </Router>
     );
 }

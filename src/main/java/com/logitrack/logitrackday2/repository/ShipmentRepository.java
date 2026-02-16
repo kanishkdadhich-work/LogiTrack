@@ -18,6 +18,7 @@ public interface ShipmentRepository extends JpaRepository<Shipment, Long> {
     Optional<Shipment> findByTrackingNumber(String trackingNumber);
     //projection baby
     List<ShipmentDriverView> findAllProjectedBy();
+    List<Shipment> findByDriver_User_Username(String username);
 //    @Query(value = "SELECT nextval('shipments_seq')", nativeQuery = true)
 //    Long getNextSequenceValue();
 ////    @Modifying

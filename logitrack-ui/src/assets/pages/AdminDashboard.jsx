@@ -1,3 +1,4 @@
+import axios from 'axios';
 import PackageTable from '../../components/PackageTable.jsx';
 import { useState, useEffect } from 'react';
 
@@ -5,16 +6,14 @@ const AdminDashboard = () => {
     const [packages, setPackages] = useState([]);
 
     useEffect(() => {
-        // Fetches the joined view of shipments and drivers
-        fetch('http://localhost:8080/api/tables/with-drivers')
-            .then(response => response.json())
-            .then(data => {
-                setPackages(data);
+        // Use axios instead of fetch to include the JWT token automatically
+        axios.get('http://localhost:8080/api/tables/with-drivers')
+            .then(response => {
+                setPackages(response.data);
             })
-            .catch(error => console.error("Error:", error));
+            .catch(error => console.error("Error fetching shipments:", error));
     }, []);
 
-    // Statistics Logic
     const totalCount = packages.length;
     const deliveredCount = packages.filter(pkg => pkg.status === 'DELIVERED').length;
 

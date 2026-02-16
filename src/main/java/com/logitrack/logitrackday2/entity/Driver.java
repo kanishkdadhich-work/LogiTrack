@@ -21,4 +21,8 @@ public class Driver {
     @OneToMany(mappedBy = "driver")
     @JsonManagedReference // 👈 Add this! The parent "manages" the relationship
     private List<Shipment> shipments;
+
+    @OneToOne
+    @JoinColumn(name = "user_id")
+    private User user;
 }

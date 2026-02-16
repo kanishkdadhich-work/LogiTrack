@@ -3,9 +3,9 @@
   margin: 0 auto;
   padding: 0 20px;
 }
-@tailwind base;
-@tailwind components;
 @tailwind utilities;
+
+
 /* Reusable Cards */
 .card {
   background: white;
