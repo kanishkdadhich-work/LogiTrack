@@ -1,6 +1,6 @@
 package com.logitrack.logitrackday2.entity;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.logitrack.logitrackday2.service.ShipmentInterface;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -68,9 +68,15 @@ public class Shipment implements ShipmentInterface {
     @Setter
     @Getter
     @ManyToOne
-
     @JoinColumn(name = "driver_id")
-    @JsonBackReference // 👈 Add this! Prevents the loop from going back to Driver
     private Driver driver;
+
+    @Setter
+    @Getter
+    @ManyToOne
+    @JoinColumn(name = "manager_id")
+    private User manager;
+
+
 
 }

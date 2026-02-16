@@ -16,9 +16,12 @@ public interface ShipmentRepository extends JpaRepository<Shipment, Long> {
 
     // Derived query method: JPA creates the SQL automatically!
     Optional<Shipment> findByTrackingNumber(String trackingNumber);
+    
     //projection baby
     List<ShipmentDriverView> findAllProjectedBy();
-    List<Shipment> findByDriver_User_Username(String username);
+    
+    @Query("SELECT s FROM Shipment s JOIN s.driver d JOIN d.user u WHERE u.username = :username")
+    List<Shipment> findByDriver_User_Username(@Param("username") String username);
 //    @Query(value = "SELECT nextval('shipments_seq')", nativeQuery = true)
 //    Long getNextSequenceValue();
 ////    @Modifying

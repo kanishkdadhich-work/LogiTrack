@@ -1,34 +1,220 @@
-// import React, { useState, useEffect } from 'react';
-// import axios from 'axios';
-// import { motion, AnimatePresence } from 'framer-motion';
-//
-// const STATUS_STEPS = [
-//     { label: "Processed", key: "CREATED", symbol: "📋", color: "#6366f1" },
-//     { label: "Designing", key: "PROCESSING", symbol: "🎨", color: "#a855f7" },
-//     { label: "Shipped", key: "SHIPPED", symbol: "📦", color: "#ec4899" },
-//     { label: "En Route", key: "IN_TRANSIT", symbol: "🚚", color: "#f59e0b" },
-//     { label: "Arrived", key: "DELIVERED", symbol: "🏠", color: "#10b981" }
-// ];
-//
-// const UpdateShipmentStatus = () => {
-//     const [trackingNo, setTrackingNo] = useState('');
-//     const [shipment, setShipment] = useState(null);
-//     const [loading, setLoading] = useState(false);
-//     const [history, setHistory] = useState([]);
-//
-//     // Load history on mount
-//     useEffect(() => {
-//         const savedHistory = JSON.parse(localStorage.getItem('shipment_history') || '[]');
-//         setHistory(savedHistory);
-//     }, []);
-//
-//     const saveToHistory = (newShipment) => {
-//         const updatedHistory = [
-//             newShipment,
-//             ...history.filter(item => item.trackingNumber !== newShipment.trackingNumber)
-//         ].slice(0, 5); // Keep last 5
-//         setHistory(updatedHistory);
-//         localStorage.setItem('shipment_history', JSON.stringify(updatedHistory));
+import React, { useState, useContext } from 'react';
+import axios from 'axios';
+import { AuthContext } from '../context/AuthContext.jsx';
+import { CheckCircle, AlertCircle } from 'lucide-react';
+
+const UpdateShipmentStatus = ({ shipment, onSuccess }) => {
+    const { isAdmin, isManager, isDriver } = useContext(AuthContext);
+    const [status, setStatus] = useState(shipment?.status || 'CREATED');
+    const [loading, setLoading] = useState(false);
+    const [message, setMessage] = useState('');
+    const [error, setError] = useState('');
+
+    const availableStatuses = [
+        'CREATED',
+        'PROCESSING',
+        'SHIPPED',
+        'IN_TRANSIT',
+        'DELIVERED',
+        'CANCELLED'
+    ];
+
+    // Drivers can only update to specific statuses
+    const getAvailableStatuses = () => {
+        if (isDriver && !isAdmin && !isManager) {
+            // Drivers can only update these statuses
+            return ['IN_TRANSIT', 'DELIVERED'];
+        }
+        return availableStatuses;
+    };
+
+    const handleUpdateStatus = async (e) => {
+        e.preventDefault();
+        setMessage('');
+        setError('');
+        setLoading(true);
+
+        try {
+            const token = localStorage.getItem('token');
+            const response = await axios.put(
+                `http://localhost:8080/api/shipments/track/${shipment.trackingNumber}`,
+                { status },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            setMessage('✅ Status updated successfully!');
+            setTimeout(() => {
+                if (onSuccess) onSuccess();
+            }, 1000);
+        } catch (err) {
+            setError('❌ ' + (err.response?.data?.message || 'Failed to update status'));
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div style={containerStyle}>
+            <div style={infoCardStyle}>
+                <h4 style={{ margin: '0 0 12px 0', color: '#0f172a' }}>Shipment Details</h4>
+                <div style={detailsGridStyle}>
+                    <div>
+                        <p style={labelStyle}>Tracking Number</p>
+                        <p style={valueStyle}>{shipment.trackingNumber}</p>
+                    </div>
+                    <div>
+                        <p style={labelStyle}>Current Status</p>
+                        <p style={valueStyle}>{shipment.status}</p>
+                    </div>
+                    <div>
+                        <p style={labelStyle}>Driver</p>
+                        <p style={valueStyle}>{shipment.driver?.name || 'Unassigned'}</p>
+                    </div>
+                    <div>
+                        <p style={labelStyle}>Manager</p>
+                        <p style={valueStyle}>{shipment.manager?.username || 'Admin'}</p>
+                    </div>
+                </div>
+            </div>
+
+            {message && (
+                <div style={successAlertStyle}>
+                    <CheckCircle size={20} style={{ marginRight: '12px' }} />
+                    {message}
+                </div>
+            )}
+
+            {error && (
+                <div style={errorAlertStyle}>
+                    <AlertCircle size={20} style={{ marginRight: '12px' }} />
+                    {error}
+                </div>
+            )}
+
+            <form onSubmit={handleUpdateStatus} style={formStyle}>
+                <div style={formGroupStyle}>
+                    <label style={labelStyle}>New Status *</label>
+                    <select
+                        value={status}
+                        onChange={(e) => setStatus(e.target.value)}
+                        style={selectStyle}
+                    >
+                        {getAvailableStatuses().map(s => (
+                            <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
+                        ))}
+                    </select>
+                    {isDriver && !isAdmin && !isManager && (
+                        <p style={{ fontSize: '12px', color: '#64748b', margin: '6px 0 0 0' }}>
+                            ℹ️ As a driver, you can only update to: IN_TRANSIT or DELIVERED
+                        </p>
+                    )}
+                </div>
+
+                <button
+                    type="submit"
+                    disabled={loading || status === shipment?.status}
+                    style={{
+                        ...submitBtnStyle,
+                        ...(loading || status === shipment?.status ? { opacity: 0.6, cursor: 'not-allowed' } : {})
+                    }}
+                >
+                    {loading ? 'Updating...' : '✓ Update Status'}
+                </button>
+            </form>
+        </div>
+    );
+};
+
+const containerStyle = {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px'
+};
+
+const infoCardStyle = {
+    backgroundColor: '#f0f9ff',
+    border: '1px solid #bfdbfe',
+    borderRadius: '8px',
+    padding: '16px'
+};
+
+const detailsGridStyle = {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, 1fr)',
+    gap: '12px'
+};
+
+const labelStyle = {
+    fontSize: '12px',
+    fontWeight: '600',
+    color: '#64748b',
+    margin: '0 0 4px 0',
+    textTransform: 'uppercase'
+};
+
+const valueStyle = {
+    fontSize: '14px',
+    color: '#0f172a',
+    margin: 0,
+    fontWeight: '500'
+};
+
+const formStyle = {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px'
+};
+
+const formGroupStyle = {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px'
+};
+
+const selectStyle = {
+    padding: '10px 12px',
+    border: '1px solid #e2e8f0',
+    borderRadius: '6px',
+    fontSize: '14px',
+    fontFamily: 'inherit',
+    backgroundColor: '#ffffff'
+};
+
+const submitBtnStyle = {
+    backgroundColor: '#2563eb',
+    color: '#ffffff',
+    padding: '10px 16px',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: '500',
+    transition: 'background-color 0.3s'
+};
+
+const successAlertStyle = {
+    backgroundColor: '#d1fae5',
+    border: '1px solid #6ee7b7',
+    color: '#065f46',
+    padding: '12px 16px',
+    borderRadius: '6px',
+    display: 'flex',
+    alignItems: 'center',
+    fontSize: '14px'
+};
+
+const errorAlertStyle = {
+    backgroundColor: '#fee2e2',
+    border: '1px solid #fca5a5',
+    color: '#991b1b',
+    padding: '12px 16px',
+    borderRadius: '6px',
+    display: 'flex',
+    alignItems: 'center',
+    fontSize: '14px'
+};
+
+export default UpdateShipmentStatus;
 //     };
 //
 //     const fetchShipment = async (tNo = trackingNo) => {
@@ -206,222 +392,3 @@
 // const selectStyle = { width: '100%', padding: '14px', borderRadius: '14px', border: '1px solid #e2e8f0', outline: 'none', cursor: 'pointer', fontWeight: '600', color: '#1e293b', appearance: 'none' };
 //
 // export default UpdateShipmentStatus;
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-    Search,
-    History,
-    Fingerprint,
-    ChevronDown,
-    PackageSearch,
-    Loader2,
-    Activity,
-    ClipboardCheck,
-    Package,
-    Truck,
-    MapPin,
-    Home
-} from 'lucide-react';
-
-// Unified constants for the UI and Backend
-const STATUS_STEPS = [
-    { label: "Processed", key: "CREATED", icon: ClipboardCheck, colorClass: "text-indigo-600", bgClass: "bg-indigo-600" },
-    { label: "Designing", key: "PROCESSING", icon: Package, colorClass: "text-purple-600", bgClass: "bg-purple-600" },
-    { label: "Shipped", key: "SHIPPED", icon: Truck, colorClass: "text-pink-600", bgClass: "bg-pink-600" },
-    { label: "En Route", key: "IN_TRANSIT", icon: MapPin, colorClass: "text-amber-600", bgClass: "bg-amber-600" },
-    { label: "Arrived", key: "DELIVERED", icon: Home, colorClass: "text-emerald-600", bgClass: "bg-emerald-600" }
-];
-
-const UpdateShipmentStatus = () => {
-    const [trackingNo, setTrackingNo] = useState('');
-    const [shipment, setShipment] = useState(null);
-    const [loading, setLoading] = useState(false);
-    const [history, setHistory] = useState([]);
-
-    useEffect(() => {
-        const savedHistory = JSON.parse(localStorage.getItem('shipment_history') || '[]');
-        setHistory(savedHistory);
-    }, []);
-
-    const saveToHistory = (newShipment) => {
-        const updatedHistory = [
-            newShipment,
-            ...history.filter(item => item.trackingNumber !== newShipment.trackingNumber)
-        ].slice(0, 5);
-        setHistory(updatedHistory);
-        localStorage.setItem('shipment_history', JSON.stringify(updatedHistory));
-    };
-
-    const fetchShipment = async (tNo = trackingNo) => {
-        if (!tNo) return;
-        setLoading(true);
-        try {
-            const res = await axios.get(`http://localhost:8080/api/shipments/${tNo}`);
-            setShipment(res.data);
-            saveToHistory(res.data);
-        } catch (err) {
-            alert("Shipment not found.");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const updateStatus = async (newStatus) => {
-        try {
-            const res = await axios.put(
-                `http://localhost:8080/api/shipments/track/${shipment.trackingNumber}`,
-                { ...shipment, status: newStatus }
-            );
-            setShipment(res.data);
-            saveToHistory(res.data);
-        } catch (err) {
-            alert("Failed to update status.");
-        }
-    };
-
-    const currentStepIndex = shipment ? STATUS_STEPS.findIndex(s => s.key === shipment.status) : -1;
-
-    return (
-        <div className="min-h-screen bg-slate-50/50 py-16 px-6">
-            <div className="max-w-3xl mx-auto">
-
-                {/* Header Branding */}
-                <header className="mb-12">
-                    <div className="flex items-center gap-4 mb-3">
-                        <div className="w-12 h-12 rounded-3xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-200">
-                            <Activity className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                            <h1 className="text-3xl font-black text-slate-900 tracking-tight">Logistics Hub</h1>
-                            <p className="text-slate-500 text-sm font-medium">Global Operations Management</p>
-                        </div>
-                    </div>
-                </header>
-
-                {/* Search Section */}
-                <div className="relative group mb-4">
-                    <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-                    <input
-                        className="w-full h-16 pl-14 pr-32 bg-white border-2 border-slate-100 rounded-[2rem] text-slate-900 font-semibold shadow-sm focus:outline-none focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/5 transition-all"
-                        placeholder="Enter tracking number..."
-                        value={trackingNo}
-                        onChange={(e) => setTrackingNo(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && fetchShipment()}
-                    />
-                    <button
-                        onClick={() => fetchShipment()}
-                        disabled={loading || !trackingNo}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 h-11 px-8 bg-slate-900 text-white rounded-2xl text-sm font-bold hover:bg-indigo-600 transition-all disabled:opacity-30"
-                    >
-                        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Track'}
-                    </button>
-                </div>
-
-                {/* History Tags */}
-                {history.length > 0 && (
-                    <div className="flex items-center gap-3 flex-wrap mb-12">
-                        <div className="flex items-center gap-1.5 text-slate-400">
-                            <History className="w-4 h-4" />
-                            <span className="text-[10px] font-black uppercase tracking-widest">Recent</span>
-                        </div>
-                        {history.map((item) => (
-                            <button
-                                key={item.trackingNumber}
-                                onClick={() => { setTrackingNo(item.trackingNumber); fetchShipment(item.trackingNumber); }}
-                                className="px-4 py-2 rounded-xl bg-white border border-slate-100 text-slate-600 text-xs font-bold hover:border-indigo-200 hover:text-indigo-600 shadow-sm transition-all"
-                            >
-                                {item.trackingNumber}
-                            </button>
-                        ))}
-                    </div>
-                )}
-
-                <AnimatePresence mode="wait">
-                    {shipment ? (
-                        <motion.div
-                            key={shipment.trackingNumber}
-                            initial={{ opacity: 0, scale: 0.98, y: 10 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.98, y: -10 }}
-                            className="bg-white border border-slate-100 rounded-[2.5rem] shadow-xl shadow-slate-200/60 overflow-hidden"
-                        >
-                            <div className="p-8 sm:p-10">
-                                <div className="flex items-start justify-between mb-10">
-                                    <div>
-                                        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-xl text-[10px] font-black text-slate-500 uppercase tracking-tighter mb-2">
-                                            <Fingerprint className="w-3 h-3" />
-                                            Registry ID: #{shipment.id}
-                                        </div>
-                                        <h2 className="text-3xl font-black text-slate-900">{shipment.trackingNumber}</h2>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <div className={`w-3 h-3 rounded-full animate-pulse shadow-lg ${STATUS_STEPS[currentStepIndex]?.bgClass}`} />
-                                        <span className={`text-xs font-black uppercase tracking-widest ${STATUS_STEPS[currentStepIndex]?.colorClass}`}>
-                                            {STATUS_STEPS[currentStepIndex]?.label}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* Animated Grid Stages */}
-                                <div className="grid grid-cols-5 gap-3 mb-10">
-                                    {STATUS_STEPS.map((step, index) => {
-                                        const isCurrent = index === currentStepIndex;
-                                        const isDone = index < currentStepIndex;
-                                        const StepIcon = step.icon;
-
-                                        return (
-                                            <motion.div
-                                                key={step.key}
-                                                animate={{
-                                                    backgroundColor: isCurrent ? '#f8fafc' : 'transparent',
-                                                    borderColor: isCurrent ? '#6366f1' : '#f1f5f9',
-                                                    y: isCurrent ? -5 : 0
-                                                }}
-                                                className={`flex flex-col items-center p-4 rounded-2xl border-2 transition-colors`}
-                                            >
-                                                <StepIcon className={`w-6 h-6 mb-3 ${isCurrent || isDone ? step.colorClass : 'text-slate-200'}`} />
-                                                <span className={`text-[10px] font-black uppercase tracking-tighter text-center leading-tight ${isCurrent ? 'text-slate-900' : 'text-slate-300'}`}>
-                                                    {step.label}
-                                                </span>
-                                            </motion.div>
-                                        );
-                                    })}
-                                </div>
-
-                                {/* Control Panel */}
-                                <div className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100">
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Update Journey State</p>
-                                    <div className="relative">
-                                        <select
-                                            value={shipment.status}
-                                            onChange={(e) => updateStatus(e.target.value)}
-                                            className="w-full h-14 px-6 bg-white border-2 border-slate-200 rounded-2xl text-slate-900 font-bold text-sm appearance-none cursor-pointer focus:border-indigo-500 outline-none transition-all"
-                                        >
-                                            {STATUS_STEPS.map(s => (
-                                                <option key={s.key} value={s.key}>{s.label}</option>
-                                            ))}
-                                        </select>
-                                        <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
-                                    </div>
-                                </div>
-                            </div>
-                        </motion.div>
-                    ) : (
-                        <div className="py-24 text-center">
-                            <div className="w-20 h-20 bg-white border border-slate-100 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-sm">
-                                <PackageSearch className="w-10 h-10 text-slate-200" />
-                            </div>
-                            <h3 className="text-slate-900 font-bold text-lg">No Active Inquiry</h3>
-                            <p className="text-slate-400 text-sm max-w-xs mx-auto mt-2">
-                                Enter a shipment tracking code above to monitor the real-time logistics pipeline.
-                            </p>
-                        </div>
-                    )}
-                </AnimatePresence>
-            </div>
-        </div>
-    );
-};
-
-export default UpdateShipmentStatus;

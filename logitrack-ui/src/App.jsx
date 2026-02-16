@@ -4,15 +4,9 @@ import { AuthContext } from './context/AuthContext.jsx';
 import Navbar from './components/Navbar.jsx';
 import Home from './components/home.jsx';
 import LoginPage from './components/LoginPage.jsx';
-import AdminDashboard from './assets/pages/AdminDashboard.jsx';
-import ShipmentForm from './components/ShipmentForm.jsx';
+import Dashboard from './components/Dashboard.jsx';
 import ShipmentTracker from './components/ShipmentTracker.jsx';
-import UpdateShipmentStatus from './components/UpdateShipmentStatus.jsx';
 import './App.css';
-
-// Placeholder components for your new flow goals
-const UserManagement = () => <div className="container"><h1>User Management (Admin Only)</h1><p>Manage users and passwords here.</p></div>;
-const ProfileSettings = () => <div className="container"><h1>Profile Settings</h1><p>Update your personal information and password.</p></div>;
 
 // Optimized ProtectedRoute using AuthContext helpers
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -30,7 +24,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 };
 
 function AppContent() {
-    const { user, logout, token, isAdmin, isManager, isDriver } = useContext(AuthContext);
+    const { user, logout, token } = useContext(AuthContext);
 
     return (
         <>
@@ -39,46 +33,19 @@ function AppContent() {
 
             <Routes>
                 {/* Public Routes */}
-                <Route path="/login" element={token ? <Navigate to="/" /> : <LoginPage />} />
+                <Route path="/login" element={token ? <Navigate to="/dashboard" /> : <LoginPage />} />
                 <Route path="/" element={<Home />} />
                 <Route path="/track" element={<ShipmentTracker />} />
 
-                {/* --- PAGE 1: User Management (Strictly Admin) --- */}
-                <Route path="/admin/users" element={
-                    <ProtectedRoute allowedRoles={['ADMIN']}>
-                        <UserManagement />
-                    </ProtectedRoute>
-                } />
-
-                {/* --- PAGE 2: Logistics Portal (Admin & Manager) --- */}
-                <Route path="/admin" element={
-                    <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}>
-                        <AdminDashboard />
-                    </ProtectedRoute>
-                } />
-
-                <Route path="/admin/add-shipment" element={
-                    <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}>
-                        <ShipmentForm />
-                    </ProtectedRoute>
-                } />
-
-                {/* Status Updates: Admin, Manager, and Driver can access */}
-                <Route path="/admin/status" element={
-                    <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'DRIVER']}>
-                        <UpdateShipmentStatus />
-                    </ProtectedRoute>
-                } />
-
-                {/* --- PAGE 3: Profile Settings (Any Logged-in User) --- */}
-                <Route path="/profile" element={
+                {/* Dashboard - All roles can access, but with different features */}
+                <Route path="/dashboard" element={
                     <ProtectedRoute>
-                        <ProfileSettings />
+                        <Dashboard />
                     </ProtectedRoute>
                 } />
 
                 {/* Catch-all */}
-                <Route path="*" element={<Navigate to={token ? "/" : "/login"} />} />
+                <Route path="*" element={<Navigate to={token ? "/dashboard" : "/login"} />} />
             </Routes>
         </>
     );

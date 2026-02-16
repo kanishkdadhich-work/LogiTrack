@@ -12,7 +12,7 @@ const Home = () => {
                 </p>
                 <div style={{ marginTop: '30px' }}>
                     <button className="btn-primary" onClick={() => navigate('/admin')}>
-                        Open Admin Dashboard
+                        Enter Application
                     </button>
                 </div>
             </div>

@@ -1,94 +1,91 @@
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import PackageTable from '../../components/PackageTable.jsx';
-import { useState, useEffect } from 'react';
+import ShipmentForm from '../../components/ShipmentForm.jsx';
+import { Plus, X } from 'lucide-react';
 
 const AdminDashboard = () => {
     const [packages, setPackages] = useState([]);
+    const [showAddForm, setShowAddForm] = useState(false);
+    // State to track which shipment is being edited
+    const [editingShipment, setEditingShipment] = useState(null);
+
+    const fetchData = () => {
+        // Updated to use your primary shipments endpoint
+        axios.get('http://localhost:8080/api/shipments')
+            .then(response => setPackages(response.data))
+            .catch(error => console.error("Error fetching shipments:", error));
+    };
 
     useEffect(() => {
-        // Use axios instead of fetch to include the JWT token automatically
-        axios.get('http://localhost:8080/api/tables/with-drivers')
-            .then(response => {
-                setPackages(response.data);
-            })
-            .catch(error => console.error("Error fetching shipments:", error));
+        fetchData();
     }, []);
 
-    const totalCount = packages.length;
-    const deliveredCount = packages.filter(pkg => pkg.status === 'DELIVERED').length;
+    // Helper to handle the "Edit" click from the table
+    const handleEditClick = (pkg) => {
+        setEditingShipment(pkg);
+        setShowAddForm(true); // Open the form view
+        window.scrollTo({ top: 0, behavior: 'smooth' }); // Scroll up to the form
+    };
 
-    // A package is unassigned if the driver object is missing or has no ID
-    const unassignedCount = packages.filter(pkg => !pkg.driver || !pkg.driver.id).length;
-
-    // Active counts represent everything that isn't delivered
-    const activeCount = totalCount - deliveredCount;
+    // Helper to close form and reset edit state
+    const handleCloseForm = () => {
+        setShowAddForm(false);
+        setEditingShipment(null);
+    };
 
     return (
         <div className="container" style={{ padding: '20px 0' }}>
-            <header style={{ marginBottom: '2rem' }}>
-                <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem', color: '#0f172a' }}>Shipment Overview</h1>
-                <p style={{ color: '#64748b' }}>Monitor active logistics and track delivery progress.</p>
+            <header style={headerStyle}>
+                <div>
+                    <h1 style={{ fontSize: '2rem', color: '#0f172a' }}>Shipment Management</h1>
+                    <p style={{ color: '#64748b' }}>Operations Control Center</p>
+                </div>
+                <button
+                    onClick={showAddForm ? handleCloseForm : () => setShowAddForm(true)}
+                    style={showAddForm ? cancelBtnStyle : addBtnStyle}
+                >
+                    {showAddForm ? <><X size={18}/> Close</> : <><Plus size={18}/> New Shipment</>}
+                </button>
             </header>
 
-            <section style={statsGridStyle}>
-                {/* Total Shipments Card */}
-                <div style={cardStyle}>
-                    <span style={statLabel}>Total</span>
-                    <div style={statValue}>{totalCount}</div>
+            {showAddForm && (
+                <div style={{ marginBottom: '2rem' }}>
+                    {/* Pass editingShipment to the form. If null, form acts as "Create New" */}
+                    <ShipmentForm
+                        selectedShipment={editingShipment}
+                        onSaveSuccess={() => {
+                            handleCloseForm();
+                            fetchData();
+                        }}
+                    />
                 </div>
+            )}
 
-                {/* New: Unassigned Shipments Card */}
-                <div style={cardStyle}>
-                    <span style={statLabel}>Unassigned</span>
-                    <div style={{...statValue, color: '#ef4444'}}>{unassignedCount}</div>
-                </div>
-
-                {/* Active Shipments Card */}
-                <div style={cardStyle}>
-                    <span style={statLabel}>Active</span>
-                    <div style={{...statValue, color: '#f59e0b'}}>{activeCount}</div>
-                </div>
-
-                {/* Delivered Shipments Card */}
-                <div style={cardStyle}>
-                    <span style={statLabel}>Delivered</span>
-                    <div style={{...statValue, color: '#10b981'}}>{deliveredCount}</div>
-                </div>
-            </section>
-
-            <PackageTable packages={packages} />
+            {/* Pass handleEditClick to the table's onEdit prop */}
+            <PackageTable
+                packages={packages}
+                onRefresh={fetchData}
+                onEdit={handleEditClick}
+            />
         </div>
     );
 };
 
-// Layout Styles
-const statsGridStyle = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-    gap: '1.5rem',
-    marginBottom: '2rem'
-};
-
-const cardStyle = {
-    padding: '1.5rem',
-    backgroundColor: '#fff',
+const headerStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' };
+const addBtnStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '10px 20px',
+    backgroundColor: '#2563eb',
+    color: 'white',
+    border: 'none',
     borderRadius: '12px',
-    border: '1px solid #e2e8f0',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+    cursor: 'pointer',
+    fontWeight: 'bold',
+    transition: '0.3s'
 };
-
-const statLabel = {
-    fontSize: '0.875rem',
-    color: '#64748b',
-    textTransform: 'uppercase',
-    fontWeight: '600'
-};
-
-const statValue = {
-    fontSize: '2rem',
-    fontWeight: '800',
-    color: '#1e293b',
-    marginTop: '8px'
-};
+const cancelBtnStyle = { ...addBtnStyle, backgroundColor: '#64748b' };
 
 export default AdminDashboard;

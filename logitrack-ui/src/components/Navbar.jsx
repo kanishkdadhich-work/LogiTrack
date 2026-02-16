@@ -1,4 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
+import { LogOut, Home, LayoutDashboard } from 'lucide-react';
 
 const Navbar = ({ role, onLogout }) => {
     const navigate = useNavigate();
@@ -10,37 +11,30 @@ const Navbar = ({ role, onLogout }) => {
 
     return (
         <nav style={navStyle}>
-            <div className="container" style={navContentStyle}>
+            <div style={navContentStyle}>
                 <Link to="/" style={{ textDecoration: 'none', cursor: 'pointer' }}>
                     <div style={{ fontWeight: '800', fontSize: '1.4rem', color: '#2563eb' }}>LOGITRACK</div>
                 </Link>
 
                 <div style={linkGroupStyle}>
-                    {/* Common link for all logged-in users */}
-                    <Link to="/" className="nav-link">Home</Link>
+                    <Link to="/" className="nav-link" style={navLinkStyle}>
+                        <Home size={18} style={{ marginRight: '6px' }} />
+                        Home
+                    </Link>
 
-                    {/* Manager Specific Links */}
-                    {role === 'manager' && (
-                        <>
-                            <Link to="/admin" className="nav-link">Dashboard</Link>
-                            <Link to="/admin/add-shipment" style={formButtonStyle}>
-                                + Assign Driver
-                            </Link>
-                        </>
+                    {role && (
+                        <Link to="/dashboard" className="nav-link" style={navLinkStyle}>
+                            <LayoutDashboard size={18} style={{ marginRight: '6px' }} />
+                            Dashboard
+                        </Link>
                     )}
 
-                    {/* Carrier & Manager Links */}
-                    {(role === 'carrier' || role === 'manager') && (
-                        <Link to="/admin/status" className="nav-link">Update Status</Link>
-                    )}
-
-                    {/* Customer & Manager Links */}
-                    {(role === 'customer' || role === 'manager') && (
-                        <Link to="/track" className="nav-link">Track Shipment</Link>
-                    )}
-
-                    {/* Logout Action */}
-                    <button onClick={handleLogoutClick} style={logoutButtonStyle}>
+                    <button
+                        onClick={handleLogoutClick}
+                        style={logoutButtonStyle}
+                        title="Logout"
+                    >
+                        <LogOut size={18} style={{ marginRight: '6px' }} />
                         Logout
                     </button>
                 </div>
@@ -49,11 +43,54 @@ const Navbar = ({ role, onLogout }) => {
     );
 };
 
-// --- Styles (Building on existing styles) ---
-const navStyle = { background: '#fff', borderBottom: '1px solid #e2e8f0', position: 'sticky', top: 0, zIndex: 100 };
-const navContentStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '70px', padding: '0 20px' };
-const linkGroupStyle = { display: 'flex', gap: '30px', alignItems: 'center' };
-const formButtonStyle = { background: '#2563eb', color: '#fff', padding: '8px 16px', borderRadius: '6px', textDecoration: 'none', fontSize: '0.9rem', fontWeight: '600' };
-const logoutButtonStyle = { background: 'transparent', border: '1px solid #cbd5e1', color: '#64748b', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' };
+const navStyle = {
+    backgroundColor: '#ffffff',
+    borderBottom: '1px solid #e2e8f0',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+    position: 'sticky',
+    top: 0,
+    zIndex: 100
+};
+
+const navContentStyle = {
+    maxWidth: '100%',
+    margin: '0 auto',
+    padding: '0 24px',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    height: '64px'
+};
+
+const linkGroupStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '24px'
+};
+
+const navLinkStyle = {
+    color: '#475569',
+    textDecoration: 'none',
+    fontSize: '15px',
+    fontWeight: '500',
+    display: 'flex',
+    alignItems: 'center',
+    transition: 'color 0.3s',
+    cursor: 'pointer'
+};
+
+const logoutButtonStyle = {
+    backgroundColor: '#ef4444',
+    color: '#ffffff',
+    border: 'none',
+    padding: '8px 14px',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontSize: '15px',
+    fontWeight: '500',
+    display: 'flex',
+    alignItems: 'center',
+    transition: 'background-color 0.3s'
+};
 
 export default Navbar;

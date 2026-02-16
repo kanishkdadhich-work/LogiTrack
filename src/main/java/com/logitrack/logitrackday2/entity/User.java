@@ -25,7 +25,6 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private String password;
 
-    // Optimized: Using Enum instead of String for role-based logic
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
@@ -35,10 +34,10 @@ public class User implements UserDetails {
 
     private String fullName;
     private String phoneNumber;
+
     @Column(nullable = false, columnDefinition = "boolean default true")
     private boolean active = true;
 
-    // Updated Constructor to use the Role Enum
     public User(String username, String password, Role role, String email, String fullName, String phoneNumber) {
         this.username = username;
         this.password = password;
@@ -48,16 +47,19 @@ public class User implements UserDetails {
         this.phoneNumber = phoneNumber;
     }
 
-    // Role Enum moved outside the method scope for global access
     public enum Role {
         ADMIN, MANAGER, DRIVER
     }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // Now .name() correctly resolves because role is a Role Enum
+        // FIX: Added null check to prevent HttpMessageNotWritableException
+        if (role == null) {
+            return List.of(new SimpleGrantedAuthority("ROLE_NONE"));
+        }
         return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
     }
+
 
     @Override public String getPassword() { return this.password; }
     @Override public String getUsername() { return this.username; }

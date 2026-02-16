@@ -41,9 +41,12 @@ export const AuthProvider = ({ children }) => {
         const savedUsername = localStorage.getItem('username');
 
         if (savedToken && savedRole) {
+            // Normalize role to uppercase
+            const normalizedRole = savedRole.toUpperCase();
             setToken(savedToken);
-            setUser({ username: savedUsername, role: savedRole });
+            setUser({ username: savedUsername, role: normalizedRole });
             axios.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`;
+            console.log('User restored from localStorage:', { username: savedUsername, role: normalizedRole });
         }
         setLoading(false);
     }, []);
@@ -56,17 +59,22 @@ export const AuthProvider = ({ children }) => {
             });
 
             const { token, role } = response.data;
+            
+            // Ensure role is uppercase
+            const normalizedRole = role ? role.toUpperCase() : 'MANAGER';
+            
+            console.log('Login Response:', { token, role, normalizedRole });
 
-            // Optimized: Save consistent structured data
+            // Save consistent structured data
             localStorage.setItem('token', token);
-            localStorage.setItem('userRole', role);
+            localStorage.setItem('userRole', normalizedRole);
             localStorage.setItem('username', username);
 
             setToken(token);
-            setUser({ username, role });
+            setUser({ username, role: normalizedRole });
             axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-            return role;
+            return normalizedRole;
         } catch (error) {
             console.error("Login failed:", error.response?.data || error.message);
             throw error; // Let LoginPage handle the error message

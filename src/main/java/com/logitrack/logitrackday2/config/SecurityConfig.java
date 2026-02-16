@@ -49,23 +49,18 @@ public AuthenticationProvider authenticationProvider() {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // 1. PUBLIC ENDPOINTS
                         .requestMatchers("/api/auth/**", "/api/health", "/api/hello").permitAll()
 
-                        // 2. ADMIN ONLY [Goal #1: manage users, delete anything]
-                        // Access to User Management and any DELETE operation is restricted to Admin
                         .requestMatchers("/api/admin/users/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/**").hasRole("ADMIN")
-
-                        // 3. MANAGER & ADMIN [Goal #2: assign drivers, view all tables]
-                        // Managers can do everything except delete and manage user passwords
+                        .requestMatchers(HttpMethod.DELETE, "/api/shipments/**").hasRole("ADMIN")
                         .requestMatchers("/api/tables/**").hasAnyRole("ADMIN", "MANAGER")
+                        
+                        // Driver-specific endpoints
+                        .requestMatchers("/api/shipments/my-shipments").hasAnyRole("ADMIN", "MANAGER", "DRIVER")
+                        .requestMatchers("/api/shipments/track/**").hasAnyRole("ADMIN", "MANAGER", "DRIVER")
+                        
                         .requestMatchers("/api/shipments/**").hasAnyRole("ADMIN", "MANAGER")
                         .requestMatchers("/api/drivers/**").hasAnyRole("ADMIN", "MANAGER")
-
-                        // 4. DRIVER [Goal #3: update status for assigned packages]
-                        // Drivers can access status update endpoints
-                        .requestMatchers("/api/shipments/track/**").hasAnyRole("ADMIN", "MANAGER", "DRIVER")
 
                         // 5. SHARED [Goal #4: Change own information/password]
                         .requestMatchers("/api/users/me/**").authenticated()
@@ -90,10 +85,21 @@ public AuthenticationProvider authenticationProvider() {
     @Bean
     public UrlBasedCorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:3000")); // Allow React Frontend
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+
+        // 1. Origins: Allow your React Frontend
+        config.setAllowedOrigins(List.of("http://localhost:3000"));
+
+        // 2. Methods: Added PATCH to fix your current error
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+
+        // 3. Headers: Allow headers required for JWT and JSON communication
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin"));
+
+        // 4. Credentials: Required if you ever use Cookies or JSESSIONID
         config.setAllowCredentials(true);
+
+        // 5. Expose Headers: Useful if you ever need to read JWT from header in React
+        config.setExposedHeaders(List.of("Authorization"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);

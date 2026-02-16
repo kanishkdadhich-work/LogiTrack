@@ -6,6 +6,9 @@ import com.logitrack.logitrackday2.security.JwtUtil;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,17 +34,43 @@ public class AuthController {
 
         if (passwordEncoder.matches(password, user.getPassword())) {
             // Generate token with the role as a String
-            String token = jwtUtil.generateToken(user.getUsername(), user.getRole().name());
+            String roleString = user.getRole().name();
+            String token = jwtUtil.generateToken(user.getUsername(), roleString);
+
+            System.out.println("✅ Login successful for user: " + username + " with role: " + roleString);
 
             return ResponseEntity.ok(Map.of(
                     "token", token,
-                    "role", user.getRole().name(),
+                    "role", roleString,
                     "username", user.getUsername()
             ));
         }
 
+        System.out.println("❌ Login failed for user: " + username + " - Invalid password");
         return ResponseEntity.status(401).body("Invalid credentials");
     }
+
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+        
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return ResponseEntity.ok(Map.of(
+                "username", user.getUsername(),
+                "role", user.getRole().name(),
+                "email", user.getEmail(),
+                "fullName", user.getFullName()
+        ));
+    }
+
+    @GetMapping("/verify")
+    public ResponseEntity<?> verify() {
+        return ResponseEntity.ok(Map.of("status", "API is working"));
+    }
+
 }
 
 //@Data

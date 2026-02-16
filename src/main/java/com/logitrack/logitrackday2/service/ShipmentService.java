@@ -2,18 +2,22 @@ package com.logitrack.logitrackday2.service;
 
 import com.logitrack.logitrackday2.entity.Driver;
 import com.logitrack.logitrackday2.entity.Shipment;
+import com.logitrack.logitrackday2.entity.User;
 import com.logitrack.logitrackday2.exception.*;
 import com.logitrack.logitrackday2.repository.DriverRepository;
 import com.logitrack.logitrackday2.repository.ShipmentDriverView;
 import com.logitrack.logitrackday2.repository.ShipmentRepository;
+import com.logitrack.logitrackday2.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
+//@RequiredArgsConstructor
 public class ShipmentService { // Fixed: Removed the random "e" before the class name
 
     private final ShipmentRepository shipmentRepository;
@@ -22,9 +26,12 @@ public class ShipmentService { // Fixed: Removed the random "e" before the class
      * 🧩 Constructor Injection: The professional standard.
      * Spring finds the Repository bean and "plugs" it in here.
      */
-    public ShipmentService(ShipmentRepository shipmentRepository, DriverRepository driverRepository) {
+    public ShipmentService(ShipmentRepository shipmentRepository,
+                           DriverRepository driverRepository,
+                           UserRepository userRepository) {
         this.shipmentRepository = shipmentRepository;
         this.driverRepository = driverRepository;
+        this.userRepository = userRepository; // Initialization happens here
     }
 
     // Inside ShipmentService.java
@@ -47,7 +54,13 @@ public class ShipmentService { // Fixed: Removed the random "e" before the class
                 .map(shipment -> (ShipmentInterface) shipment)
                 .collect(Collectors.toList());
     }
+    @Transactional
+    public void deleteByTrackingNumber(String trackingNumber) {
+        Shipment shipment = shipmentRepository.findByTrackingNumber(trackingNumber)
+                .orElseThrow(() -> new RuntimeException("Shipment not found: " + trackingNumber));
 
+        shipmentRepository.delete(shipment);
+    }
     /**
      * Saves a new shipment using the Interface.
      */
@@ -83,35 +96,54 @@ public class ShipmentService { // Fixed: Removed the random "e" before the class
      * 💾 SECURE SAVE LOGIC
      * Handles duplicate tracking checks and transactions.
      */
+
+    private final UserRepository userRepository;
+
     @Transactional
     public ShipmentInterface save(Shipment shipment) {
-        // 1. Check for unique tracking number
+        // 1. Validate Tracking Number Syntax (TRK-XXXXX)
+        validateTrackingNumber(shipment.getTrackingNumber());
+
+        // 2. Check for unique tracking number
         if (shipmentRepository.findByTrackingNumber(shipment.getTrackingNumber()).isPresent()) {
             throw new DuplicateIdException();
         }
-        if (shipment.getDistanceInMeters() != null && shipment.getCostPerMeter() != null) {
-            double calculatedCost = shipment.getDistanceInMeters() * shipment.getCostPerMeter();
-            shipment.setTotalCost(calculatedCost);
-        }
 
+        // 3. Volume and Cost Calculation Logic
         if (shipment.getLength() != null && shipment.getWidth() != null && shipment.getHeight() != null &&
                 shipment.getDistanceInMeters() != null && shipment.getCostPerMeter() != null) {
 
             double volume = shipment.getLength() * shipment.getWidth() * shipment.getHeight();
             double calculatedCost = volume * shipment.getDistanceInMeters() * shipment.getCostPerMeter();
             shipment.setTotalCost(calculatedCost);
+        } else if (shipment.getDistanceInMeters() != null && shipment.getCostPerMeter() != null) {
+            // Fallback calculation if dimensions are missing
+            double calculatedCost = shipment.getDistanceInMeters() * shipment.getCostPerMeter();
+            shipment.setTotalCost(calculatedCost);
         }
-        // 2. Validate the Driver 🚛
+
+        // 4. Validate the Driver 🚛
         if (shipment.getDriver() != null && shipment.getDriver().getId() != null) {
             Long driverId = shipment.getDriver().getId();
-
-            // This will now find getId() if Driver entity has @Data
-            // Inside ShipmentService.java
             Driver managedDriver = driverRepository.findById(driverId)
-                    .orElseThrow(() -> new DriverNotFoundException(
-                            "Driver not found!", // Argument 1: message
-                            driverId.toString()  // Argument 2: resourceId (solves the conflict)
-                    ));
+                    .orElseThrow(() -> new DriverNotFoundException("Driver not found!", driverId.toString()));
+            shipment.setDriver(managedDriver); // Attach the managed entity
+        }
+
+        // 5. NEW: Validate the Manager 👨‍💼
+        if (shipment.getManager() != null && shipment.getManager().getId() != null) {
+            Long managerId = shipment.getManager().getId();
+
+            // We use userRepository because Managers are stored in the users table
+            User managedManager = userRepository.findById(managerId)
+                    .orElseThrow(() -> new RuntimeException("Manager not found with ID: " + managerId));
+
+            // Optional: Verify that the user actually has the MANAGER role
+            if (managedManager.getRole() != User.Role.MANAGER && managedManager.getRole() != User.Role.ADMIN) {
+                throw new RuntimeException("User with ID " + managerId + " is not authorized to manage shipments.");
+            }
+
+            shipment.setManager(managedManager);
         }
 
         return (ShipmentInterface) shipmentRepository.save(shipment);
@@ -137,7 +169,46 @@ public class ShipmentService { // Fixed: Removed the random "e" before the class
         // 3. Apply changes using our "rich" interface method
         existingShipment.updateFrom((ShipmentInterface) updatedData);
 
-        // 4. Save and return
+        // 4. Update dimensions if provided
+        if (updatedData.getLength() != null) existingShipment.setLength(updatedData.getLength());
+        if (updatedData.getWidth() != null) existingShipment.setWidth(updatedData.getWidth());
+        if (updatedData.getHeight() != null) existingShipment.setHeight(updatedData.getHeight());
+        if (updatedData.getDistanceInMeters() != null) existingShipment.setDistanceInMeters(updatedData.getDistanceInMeters());
+        if (updatedData.getCostPerMeter() != null) existingShipment.setCostPerMeter(updatedData.getCostPerMeter());
+
+        // 5. Recalculate total cost if dimensions are present
+        if (existingShipment.getLength() != null && existingShipment.getWidth() != null && existingShipment.getHeight() != null &&
+                existingShipment.getDistanceInMeters() != null && existingShipment.getCostPerMeter() != null) {
+            double volume = existingShipment.getLength() * existingShipment.getWidth() * existingShipment.getHeight();
+            double calculatedCost = volume * existingShipment.getDistanceInMeters() * existingShipment.getCostPerMeter();
+            existingShipment.setTotalCost(calculatedCost);
+        }
+
+        // 6. Update Driver if provided 🚛
+        if (updatedData.getDriver() != null && updatedData.getDriver().getId() != null) {
+            Long driverId = updatedData.getDriver().getId();
+            Driver managedDriver = driverRepository.findById(driverId)
+                    .orElseThrow(() -> new DriverNotFoundException("Driver not found!", driverId.toString()));
+            existingShipment.setDriver(managedDriver);
+        } else if (updatedData.getDriver() == null) {
+            // Allow unsetting the driver
+            existingShipment.setDriver(null);
+        }
+
+        // 7. Update Manager if provided 👨‍💼
+        if (updatedData.getManager() != null && updatedData.getManager().getId() != null) {
+            Long managerId = updatedData.getManager().getId();
+            User managedManager = userRepository.findById(managerId)
+                    .orElseThrow(() -> new RuntimeException("Manager not found with ID: " + managerId));
+            if (managedManager.getRole() != User.Role.MANAGER && managedManager.getRole() != User.Role.ADMIN) {
+                throw new RuntimeException("User with ID " + managerId + " is not authorized to manage shipments.");
+            }
+            existingShipment.setManager(managedManager);
+        } else if (updatedData.getManager() == null) {
+            existingShipment.setManager(null);
+        }
+
+        // 8. Save and return
         return (ShipmentInterface) shipmentRepository.save(existingShipment);
     }
 
@@ -254,5 +325,8 @@ public class ShipmentService { // Fixed: Removed the random "e" before the class
 
         existing.setStatus(updatedData.getStatus());
         return shipmentRepository.save(existing);
+    }
+    public List<Shipment> getMyAssignedShipments(String username) {
+        return shipmentRepository.findByDriver_User_Username(username);
     }
 }
