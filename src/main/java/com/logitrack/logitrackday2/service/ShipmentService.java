@@ -327,6 +327,12 @@ public class ShipmentService { // Fixed: Removed the random "e" before the class
         return shipmentRepository.save(existing);
     }
     public List<Shipment> getMyAssignedShipments(String username) {
-        return shipmentRepository.findByDriver_User_Username(username);
+        System.out.println("🔍 ShipmentService querying for driver username: " + username);
+        List<Shipment> results = shipmentRepository.findByDriver_User_Username(username);
+        System.out.println("🔍 Query returned " + results.size() + " shipments");
+        for (Shipment s : results) {
+            System.out.println("  - TRK: " + s.getTrackingNumber() + ", Driver: " + (s.getDriver() != null ? s.getDriver().getName() : "NULL"));
+        }
+        return results;
     }
 }

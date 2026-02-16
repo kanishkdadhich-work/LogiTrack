@@ -37,14 +37,9 @@ const ShipmentTable = ({ shipments, onRefresh, onEdit, onStatusUpdate }) => {
             const matchManager = managerName.toLowerCase().includes(managerSearch.toLowerCase());
             const matchDriver = driverName.toLowerCase().includes(driverSearch.toLowerCase());
 
-            // Drivers can only see their own shipments
-            if (isDriver && !isManager && !isAdmin) {
-                return matchManager && matchDriver && pkg.driver?.id === user?.id;
-            }
-
             return matchManager && matchDriver;
         });
-    }, [shipments, managerSearch, driverSearch, isDriver, isManager, isAdmin, user?.id]);
+    }, [shipments, managerSearch, driverSearch]);
 
     return (
         <div style={{ marginTop: '20px' }}>

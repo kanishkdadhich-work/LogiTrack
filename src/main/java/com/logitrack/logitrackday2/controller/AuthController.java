@@ -32,6 +32,12 @@ public class AuthController {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        // Check if user is active
+        if (!user.isActive()) {
+            System.out.println("❌ Login failed for user: " + username + " - Account is inactive");
+            return ResponseEntity.status(403).body("Your account has been deactivated. Please contact an administrator.");
+        }
+
         if (passwordEncoder.matches(password, user.getPassword())) {
             // Generate token with the role as a String
             String roleString = user.getRole().name();

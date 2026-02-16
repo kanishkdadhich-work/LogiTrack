@@ -20,7 +20,10 @@ public interface ShipmentRepository extends JpaRepository<Shipment, Long> {
     //projection baby
     List<ShipmentDriverView> findAllProjectedBy();
     
-    @Query("SELECT s FROM Shipment s JOIN s.driver d JOIN d.user u WHERE u.username = :username")
+    @Query("SELECT DISTINCT s FROM Shipment s " +
+           "LEFT JOIN FETCH s.driver d " +
+           "LEFT JOIN FETCH d.user u " +
+           "WHERE u.username = :username")
     List<Shipment> findByDriver_User_Username(@Param("username") String username);
 //    @Query(value = "SELECT nextval('shipments_seq')", nativeQuery = true)
 //    Long getNextSequenceValue();

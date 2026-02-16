@@ -91,8 +91,11 @@ public class HealthController {
     @GetMapping("/shipments/my-shipments")
     public List<ShipmentInterface> getMyShipments() {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        return shipmentService.getMyAssignedShipments(username).stream()
+        System.out.println("📦 Fetching shipments for driver: " + username);
+        List<ShipmentInterface> shipments = shipmentService.getMyAssignedShipments(username).stream()
                 .map(s -> (ShipmentInterface) s)
                 .toList();
+        System.out.println("✅ Found " + shipments.size() + " shipments for driver: " + username);
+        return shipments;
     }
 }
